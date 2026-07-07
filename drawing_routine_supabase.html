@@ -1,0 +1,524 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>드로잉 루틴 달력</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+	:root {
+		--paper: #fbfaf7;
+		--card: #ffffff;
+		--ink: #1e2d4d;
+		--blue: #3f6ea5;
+		--blue-soft: #eaf0f7;
+		--muted: #8a9099;
+		--line: #e7e4dd;
+		--done: #3f6ea5;
+		--rest: #c9a24b;
+	}
+	* {
+		box-sizing: border-box;
+	}
+	body {
+		margin: 0;
+		background: var(--paper);
+		color: var(--ink);
+		font-family: 'Inter', sans-serif;
+		line-height: 1.5;
+		padding: 24px 16px 60px;
+	}
+	.wrap {
+		max-width: 680px;
+		margin: 0 auto;
+	}
+	.eyebrow {
+		font-family: 'Space Mono', monospace;
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--blue);
+		margin: 0 0 6px;
+	}
+	.title-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 20px;
+		flex-wrap: wrap;
+	}
+	h1 {
+		font-family: 'Archivo', sans-serif;
+		font-weight: 800;
+		font-size: 26px;
+		margin: 0;
+		letter-spacing: -0.01em;
+	}
+	.status {
+		font-family: 'Space Mono', monospace;
+		font-size: 11px;
+		padding: 4px 9px;
+		border-radius: 7px;
+		background: var(--blue-soft);
+		color: var(--blue);
+	}
+
+	.cal-head {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 14px;
+	}
+	.month {
+		font-family: 'Archivo', sans-serif;
+		font-weight: 700;
+		font-size: 19px;
+		min-width: 132px;
+	}
+	.nav {
+		display: flex;
+		gap: 6px;
+	}
+	.nav button,
+	.today-btn {
+		font-family: 'Space Mono', monospace;
+		font-size: 13px;
+		background: var(--card);
+		border: 1px solid var(--line);
+		border-radius: 9px;
+		padding: 7px 11px;
+		cursor: pointer;
+		color: var(--ink);
+		transition: 0.15s;
+	}
+	.nav button:hover,
+	.today-btn:hover {
+		border-color: var(--blue);
+		color: var(--blue);
+	}
+	.today-btn {
+		margin-left: auto;
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 5px;
+	}
+	.dow {
+		font-family: 'Space Mono', monospace;
+		font-size: 11px;
+		color: var(--muted);
+		text-align: center;
+		padding: 4px 0 6px;
+	}
+	.dow.sun {
+		color: #c56;
+	}
+	.cell {
+		aspect-ratio: 1;
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		background: var(--card);
+		padding: 5px 6px;
+		cursor: pointer;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		transition: 0.12s;
+		overflow: hidden;
+	}
+	.cell:hover {
+		border-color: var(--blue);
+	}
+	.cell.empty {
+		background: transparent;
+		border: none;
+		cursor: default;
+	}
+	.cell.today {
+		border-color: var(--blue);
+		box-shadow: 0 0 0 2px var(--blue-soft);
+	}
+	.cell.sel {
+		border-color: var(--ink);
+		box-shadow: 0 0 0 2px var(--ink);
+	}
+	.cell.full {
+		background: var(--blue-soft);
+	}
+	.cell.rest {
+		border-style: dashed;
+		border-color: var(--rest);
+	}
+	.dnum {
+		font-family: 'Space Mono', monospace;
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--ink);
+	}
+	.cell.sun .dnum {
+		color: #c56;
+	}
+	.dots {
+		margin-top: auto;
+		display: flex;
+		gap: 3px;
+		flex-wrap: wrap;
+	}
+	.dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--line);
+	}
+	.dot.on {
+		background: var(--done);
+	}
+	.rest-mark {
+		font-size: 10px;
+		color: var(--rest);
+		font-family: 'Space Mono', monospace;
+		margin-top: auto;
+	}
+
+	.panel {
+		margin-top: 22px;
+		background: var(--card);
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		padding: 16px 18px;
+	}
+	.panel-head {
+		display: flex;
+		align-items: baseline;
+		gap: 9px;
+		margin-bottom: 6px;
+	}
+	.panel-date {
+		font-family: 'Archivo', sans-serif;
+		font-weight: 700;
+		font-size: 16px;
+	}
+	.panel-dow {
+		font-family: 'Space Mono', monospace;
+		font-size: 12px;
+		color: var(--muted);
+	}
+	.rest-toggle {
+		margin-left: auto;
+		font-family: 'Space Mono', monospace;
+		font-size: 11px;
+		background: none;
+		border: 1px solid var(--line);
+		border-radius: 7px;
+		padding: 5px 9px;
+		cursor: pointer;
+		color: var(--muted);
+		transition: 0.15s;
+	}
+	.rest-toggle.active {
+		background: #fefbf3;
+		border-color: var(--rest);
+		color: #9a7a2e;
+	}
+	.task {
+		display: flex;
+		align-items: flex-start;
+		gap: 11px;
+		padding: 10px 0;
+		cursor: pointer;
+		border-top: 1px solid var(--line);
+	}
+	.task:first-of-type {
+		border-top: none;
+	}
+	.box {
+		flex: none;
+		width: 20px;
+		height: 20px;
+		border: 1.8px solid var(--muted);
+		border-radius: 6px;
+		margin-top: 2px;
+		position: relative;
+		transition: 0.15s;
+	}
+	.task.checked .box {
+		background: var(--done);
+		border-color: var(--done);
+	}
+	.box::after {
+		content: '';
+		position: absolute;
+		left: 6px;
+		top: 2px;
+		width: 5px;
+		height: 10px;
+		border: solid #fff;
+		border-width: 0 2.4px 2.4px 0;
+		transform: rotate(45deg) scale(0);
+		transition: 0.15s;
+	}
+	.task.checked .box::after {
+		transform: rotate(45deg) scale(1);
+	}
+	.t-time {
+		font-family: 'Space Mono', monospace;
+		font-size: 12px;
+		color: var(--blue);
+		font-weight: 700;
+	}
+	.t-title {
+		font-weight: 600;
+		font-size: 14.5px;
+		margin: 1px 0;
+	}
+	.t-note {
+		font-size: 12.5px;
+		color: var(--muted);
+	}
+	.task.checked .t-title {
+		color: var(--muted);
+		text-decoration: line-through;
+	}
+	.panel.resting .task {
+		opacity: 0.35;
+		pointer-events: none;
+	}
+	.rest-banner {
+		display: none;
+		font-size: 12.5px;
+		color: #9a7a2e;
+		background: #fefbf3;
+		border-radius: 9px;
+		padding: 9px 12px;
+		margin-top: 4px;
+	}
+	.panel.resting .rest-banner {
+		display: block;
+	}
+	.footer {
+		margin-top: 18px;
+		font-size: 11.5px;
+		color: var(--muted);
+		font-family: 'Space Mono', monospace;
+		text-align: center;
+	}
+</style>
+
+<div class="wrap">
+	<p class="eyebrow">Weekly Practice / 커미션 로드맵</p>
+	<div class="title-row">
+		<h1>드로잉 루틴 달력</h1>
+		<span class="status" id="status">…</span>
+	</div>
+
+	<div class="cal-head">
+		<div class="nav"><button id="prev">‹</button><button id="next">›</button></div>
+		<span class="month" id="month"></span>
+		<button class="today-btn" id="goToday">오늘</button>
+	</div>
+
+	<div class="grid" id="grid"></div>
+	<div class="panel" id="panel"></div>
+	<div class="footer" id="footer"></div>
+</div>
+
+<script>
+	/* ============================================================
+   ↓↓↓  Supabase 설정 — 이 3줄만 채우면 동기화 켜져요  ↓↓↓
+   비워두면 자동으로 이 브라우저(localStorage)에 저장됩니다.
+   ============================================================ */
+	const SUPABASE_URL = 'https://uoicwhvevpmgpjkckjol.supabase.co'; // 예: https://xxxx.supabase.co
+	const SUPABASE_ANON_KEY =
+		'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaWN3aHZldnBtZ3Bqa2Nram9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3ODY2NzcsImV4cCI6MjA4NzM2MjY3N30.zNGNwB8rWGBd7dJSVXglkJbZamxq8EcNCppVGFTXWuc'; // Project Settings → API → anon public
+	const USER_KEY = 'yangyang'; // 본인만 아는 값으로 바꾸세요 (아무 문자열)
+	/* ============================================================ */
+
+	let supa = null;
+	if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+		supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+	}
+
+	/* ---------- 루틴 정의 ---------- */
+	const rotation = {
+		1: { t: '손 (Hands)', n: '손가락 관절, 쥔 손·펼친 손' },
+		2: { t: '옷주름 — 당김', n: '뻗은 팔·당겨지는 지점' },
+		3: { t: '얼굴 각도', n: '측면·반측면·아오리·부감' },
+		4: { t: '옷주름 — 쌓임/걸림', n: '접힌 관절, 흐르는 세로 주름' },
+		5: { t: '다리 · 발', n: '무게 실린 다리, 발 각도' },
+	};
+	function tasksFor(day) {
+		if (day >= 1 && day <= 5)
+			return [
+				{ id: 'g', time: '10분', title: '타이머 제스처 드로잉', note: '20~30초, 강제 넘김 · 어깨/골반선' },
+				{ id: 'r', time: '30분', title: rotation[day].t, note: rotation[day].n },
+			];
+		if (day === 6) return [{ id: 'c', time: '4시간', title: '학원 수업 (클튜)', note: '인체·근육·옷주름 관찰·이해' }];
+		return [
+			{ id: 'c', time: '4시간', title: '학원 수업 (클튜)', note: '실물↔일러 표본 비교' },
+			{ id: 'i', time: '1시간', title: '저녁 일러 — 수업 적용', note: '한 캐릭터 러프→선화→채색 이어그리기' },
+		];
+	}
+	const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+	/* ---------- 상태 & 저장소 ---------- */
+	const LS_KEY = 'drawing_calendar_v1';
+	let state = {};
+	let view = new Date();
+	let sel = iso(new Date());
+	function iso(d) {
+		return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+	}
+	function parseIso(s) {
+		const [y, m, d] = s.split('-').map(Number);
+		return new Date(y, m - 1, d);
+	}
+	function setStatus(t) {
+		document.getElementById('status').textContent = t;
+	}
+
+	async function loadState() {
+		if (supa) {
+			const { data, error } = await supa.from('routine_state').select('data').eq('id', USER_KEY).maybeSingle();
+			if (error) {
+				setStatus('연결 실패 ⚠');
+				return;
+			}
+			state = data && data.data ? data.data : {};
+			setStatus('동기화됨 ✓');
+		} else {
+			try {
+				const raw = localStorage.getItem(LS_KEY);
+				if (raw) state = JSON.parse(raw);
+			} catch (e) {}
+			setStatus('이 브라우저에 저장');
+		}
+	}
+	let saveTimer = null;
+	function persist() {
+		if (supa) {
+			setStatus('저장 중…');
+			clearTimeout(saveTimer);
+			saveTimer = setTimeout(async () => {
+				const { error } = await supa.from('routine_state').upsert({ id: USER_KEY, data: state, updated_at: new Date().toISOString() });
+				setStatus(error ? '저장 실패 ⚠' : '저장됨 ✓');
+			}, 600);
+		} else {
+			try {
+				localStorage.setItem(LS_KEY, JSON.stringify(state));
+			} catch (e) {}
+		}
+	}
+
+	/* ---------- 렌더 ---------- */
+	function renderCal() {
+		const y = view.getFullYear(),
+			m = view.getMonth();
+		document.getElementById('month').textContent = `${y}. ${String(m + 1).padStart(2, '0')}`;
+		const start = new Date(y, m, 1).getDay(),
+			days = new Date(y, m + 1, 0).getDate(),
+			todayIso = iso(new Date());
+		const g = document.getElementById('grid');
+		g.innerHTML = ['월', '화', '수', '목', '금', '토', '일'].map((d, i) => `<div class="dow ${i === 6 ? 'sun' : ''}">${d}</div>`).join('');
+		const offset = (start + 6) % 7;
+		for (let i = 0; i < offset; i++) g.insertAdjacentHTML('beforeend', '<div class="cell empty"></div>');
+		for (let d = 1; d <= days; d++) {
+			const date = new Date(y, m, d),
+				di = iso(date),
+				day = date.getDay(),
+				tks = tasksFor(day);
+			const resting = !!state[di + '__rest'];
+			const done = tks.filter(t => state[di + '__' + t.id]).length;
+			const full = done === tks.length && tks.length > 0;
+			let cls = 'cell';
+			if (day === 0) cls += ' sun';
+			if (di === todayIso) cls += ' today';
+			if (di === sel) cls += ' sel';
+			if (resting) cls += ' rest';
+			else if (full) cls += ' full';
+			const inner = resting
+				? `<span class="dnum">${d}</span><span class="rest-mark">휴식</span>`
+				: `<span class="dnum">${d}</span><div class="dots">${tks.map(t => `<span class="dot ${state[di + '__' + t.id] ? 'on' : ''}"></span>`).join('')}</div>`;
+			g.insertAdjacentHTML('beforeend', `<div class="${cls}" data-iso="${di}">${inner}</div>`);
+		}
+		g.querySelectorAll('.cell:not(.empty)').forEach(c => {
+			c.onclick = () => {
+				sel = c.dataset.iso;
+				renderCal();
+				renderPanel();
+			};
+		});
+	}
+	function renderPanel() {
+		const date = parseIso(sel),
+			day = date.getDay(),
+			tks = tasksFor(day),
+			resting = !!state[sel + '__rest'];
+		const p = document.getElementById('panel');
+		p.className = 'panel' + (resting ? ' resting' : '');
+		p.innerHTML = `
+    <div class="panel-head">
+      <span class="panel-date">${date.getMonth() + 1}월 ${date.getDate()}일</span>
+      <span class="panel-dow">${DOW[day]}요일</span>
+      <button class="rest-toggle ${resting ? 'active' : ''}" id="restBtn">${resting ? '✓ 휴식' : '휴식일로'}</button>
+    </div>
+    <div class="rest-banner">오늘은 회복하는 날 — 실력은 잠·휴식에서 정리돼요.</div>
+    ${tks
+			.map(
+				t => `
+      <div class="task ${state[sel + '__' + t.id] ? 'checked' : ''}" data-id="${t.id}">
+        <div class="box"></div>
+        <div><div class="t-time">${t.time}</div><div class="t-title">${t.title}</div><div class="t-note">${t.note}</div></div>
+      </div>`
+			)
+			.join('')}`;
+		p.querySelectorAll('.task').forEach(el => {
+			el.onclick = () => {
+				const k = sel + '__' + el.dataset.id;
+				state[k] = !state[k];
+				persist();
+				renderCal();
+				renderPanel();
+			};
+		});
+		document.getElementById('restBtn').onclick = () => {
+			const k = sel + '__rest';
+			state[k] = !state[k];
+			persist();
+			renderCal();
+			renderPanel();
+		};
+	}
+
+	document.getElementById('prev').onclick = () => {
+		view.setMonth(view.getMonth() - 1);
+		renderCal();
+	};
+	document.getElementById('next').onclick = () => {
+		view.setMonth(view.getMonth() + 1);
+		renderCal();
+	};
+	document.getElementById('goToday').onclick = () => {
+		view = new Date();
+		sel = iso(new Date());
+		renderCal();
+		renderPanel();
+	};
+	document.getElementById('footer').textContent = '날짜를 눌러 체크 · 지친 날은 "휴식일로"';
+
+	// 다른 기기에서 바꾼 내용 반영 (탭 다시 열 때 최신화)
+	window.addEventListener('focus', async () => {
+		if (supa) {
+			await loadState();
+			renderCal();
+			renderPanel();
+		}
+	});
+
+	(async function boot() {
+		await loadState();
+		renderCal();
+		renderPanel();
+	})();
+</script>
