@@ -1,0 +1,12 @@
+{
+  "name": "드로잉 루틴 달력",
+  "short_name": "드로잉 루틴",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1E2D4D",
+  "theme_color": "#1E2D4D",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
