@@ -1,470 +1,860 @@
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>드로잉 루틴 달력</title>
-<link rel="apple-touch-icon" href="icon-180.png" />
-<link rel="icon" type="image/png" href="icon-180.png" />
-<link rel="manifest" href="manifest.webmanifest" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="드로잉 루틴" />
-<meta name="theme-color" content="#1E2D4D" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-	:root {
-		--paper: #fbfaf7;
-		--card: #ffffff;
-		--ink: #1e2d4d;
-		--blue: #3f6ea5;
-		--blue-soft: #eaf0f7;
-		--muted: #8a9099;
-		--line: #e7e4dd;
-		--done: #3f6ea5;
-		--rest: #c9a24b;
-	}
-	* {
-		box-sizing: border-box;
-	}
-	body {
-		margin: 0;
-		background: var(--paper);
-		color: var(--ink);
-		font-family: 'Inter', sans-serif;
-		line-height: 1.5;
-		padding: 24px 16px 60px;
-	}
-	.wrap {
-		max-width: 680px;
-		margin: 0 auto;
-	}
-	.eyebrow {
-		font-family: 'Space Mono', monospace;
-		font-size: 11px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--blue);
-		margin: 0 0 6px;
-	}
-	.title-row {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		margin-bottom: 20px;
-		flex-wrap: wrap;
-	}
-	h1 {
-		font-family: 'Archivo', sans-serif;
-		font-weight: 800;
-		font-size: 26px;
-		margin: 0;
-		letter-spacing: -0.01em;
-	}
-	.status {
-		font-family: 'Space Mono', monospace;
-		font-size: 11px;
-		padding: 4px 9px;
-		border-radius: 7px;
-		background: var(--blue-soft);
-		color: var(--blue);
-	}
-
-	.cal-head {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin-bottom: 14px;
-	}
-	.month {
-		font-family: 'Archivo', sans-serif;
-		font-weight: 700;
-		font-size: 19px;
-		min-width: 132px;
-	}
-	.nav {
-		display: flex;
-		gap: 6px;
-	}
-	.nav button,
-	.today-btn {
-		font-family: 'Space Mono', monospace;
-		font-size: 13px;
-		background: var(--card);
-		border: 1px solid var(--line);
-		border-radius: 9px;
-		padding: 7px 11px;
-		cursor: pointer;
-		color: var(--ink);
-		transition: 0.15s;
-	}
-	.nav button:hover,
-	.today-btn:hover {
-		border-color: var(--blue);
-		color: var(--blue);
-	}
-	.today-btn {
-		margin-left: auto;
-	}
-
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		gap: 5px;
-	}
-	.dow {
-		font-family: 'Space Mono', monospace;
-		font-size: 11px;
-		color: var(--muted);
-		text-align: center;
-		padding: 4px 0 6px;
-	}
-	.dow.sun {
-		color: #c56;
-	}
-	.cell {
-		aspect-ratio: 1;
-		border: 1px solid var(--line);
-		border-radius: 10px;
-		background: var(--card);
-		padding: 5px 6px;
-		cursor: pointer;
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		transition: 0.12s;
-		overflow: hidden;
-	}
-	.cell:hover {
-		border-color: var(--blue);
-	}
-	.cell.empty {
-		background: transparent;
-		border: none;
-		cursor: default;
-	}
-	.cell.today {
-		border-color: var(--blue);
-		box-shadow: 0 0 0 2px var(--blue-soft);
-	}
-	.cell.sel {
-		border-color: var(--ink);
-		box-shadow: 0 0 0 2px var(--ink);
-	}
-	.cell.full {
-		background: var(--blue-soft);
-	}
-	.cell.rest {
-		border-style: dashed;
-		border-color: var(--rest);
-	}
-	.dnum {
-		font-family: 'Space Mono', monospace;
-		font-size: 12px;
-		font-weight: 700;
-		color: var(--ink);
-	}
-	.cell.sun .dnum {
-		color: #c56;
-	}
-	.dots {
-		margin-top: auto;
-		display: flex;
-		gap: 3px;
-		flex-wrap: wrap;
-	}
-	.dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: var(--line);
-	}
-	.dot.on {
-		background: var(--done);
-	}
-	.rest-mark {
-		font-size: 10px;
-		color: var(--rest);
-		font-family: 'Space Mono', monospace;
-		margin-top: auto;
-	}
-
-	.panel {
-		margin-top: 22px;
-		background: var(--card);
-		border: 1px solid var(--line);
-		border-radius: 14px;
-		padding: 16px 18px;
-	}
-	.panel-head {
-		display: flex;
-		align-items: baseline;
-		gap: 9px;
-		margin-bottom: 6px;
-	}
-	.panel-date {
-		font-family: 'Archivo', sans-serif;
-		font-weight: 700;
-		font-size: 16px;
-	}
-	.panel-dow {
-		font-family: 'Space Mono', monospace;
-		font-size: 12px;
-		color: var(--muted);
-	}
-	.rest-toggle {
-		margin-left: auto;
-		font-family: 'Space Mono', monospace;
-		font-size: 11px;
-		background: none;
-		border: 1px solid var(--line);
-		border-radius: 7px;
-		padding: 5px 9px;
-		cursor: pointer;
-		color: var(--muted);
-		transition: 0.15s;
-	}
-	.rest-toggle.active {
-		background: #fefbf3;
-		border-color: var(--rest);
-		color: #9a7a2e;
-	}
-	.task {
-		display: flex;
-		align-items: flex-start;
-		gap: 11px;
-		padding: 10px 0;
-		cursor: pointer;
-		border-top: 1px solid var(--line);
-	}
-	.task:first-of-type {
-		border-top: none;
-	}
-	.box {
-		flex: none;
-		width: 20px;
-		height: 20px;
-		border: 1.8px solid var(--muted);
-		border-radius: 6px;
-		margin-top: 2px;
-		position: relative;
-		transition: 0.15s;
-	}
-	.task.checked .box {
-		background: var(--done);
-		border-color: var(--done);
-	}
-	.box::after {
-		content: '';
-		position: absolute;
-		left: 6px;
-		top: 2px;
-		width: 5px;
-		height: 10px;
-		border: solid #fff;
-		border-width: 0 2.4px 2.4px 0;
-		transform: rotate(45deg) scale(0);
-		transition: 0.15s;
-	}
-	.task.checked .box::after {
-		transform: rotate(45deg) scale(1);
-	}
-	.t-time {
-		font-family: 'Space Mono', monospace;
-		font-size: 12px;
-		color: var(--blue);
-		font-weight: 700;
-	}
-	.t-title {
-		font-weight: 600;
-		font-size: 14.5px;
-		margin: 1px 0;
-	}
-	.t-note {
-		font-size: 12.5px;
-		color: var(--muted);
-	}
-	.task.checked .t-title {
-		color: var(--muted);
-		text-decoration: line-through;
-	}
-	.panel.resting .task {
-		opacity: 0.35;
-		pointer-events: none;
-	}
-	.rest-banner {
-		display: none;
-		font-size: 12.5px;
-		color: #9a7a2e;
-		background: #fefbf3;
-		border-radius: 9px;
-		padding: 9px 12px;
-		margin-top: 4px;
-	}
-	.panel.resting .rest-banner {
-		display: block;
-	}
-	.footer {
-		margin-top: 18px;
-		font-size: 11.5px;
-		color: var(--muted);
-		font-family: 'Space Mono', monospace;
-		text-align: center;
-	}
-</style>
-
-<div class="wrap">
-	<p class="eyebrow">Weekly Practice / 커미션 로드맵</p>
-	<div class="title-row">
-		<h1>드로잉 루틴 달력</h1>
-		<span class="status" id="status">…</span>
-	</div>
-
-	<div class="cal-head">
-		<div class="nav"><button id="prev">‹</button><button id="next">›</button></div>
-		<span class="month" id="month"></span>
-		<button class="today-btn" id="goToday">오늘</button>
-	</div>
-
-	<div class="grid" id="grid"></div>
-	<div class="panel" id="panel"></div>
-	<div class="footer" id="footer"></div>
-</div>
-
-<script>
-	/* ============================================================
-   ↓↓↓  Supabase 설정 — 이 3줄만 채우면 동기화 켜져요  ↓↓↓
-   비워두면 자동으로 이 브라우저(localStorage)에 저장됩니다.
-   ============================================================ */
-	const SUPABASE_URL = 'https://uoicwhvevpmgpjkckjol.supabase.co';
-	const SUPABASE_ANON_KEY =
-		'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaWN3aHZldnBtZ3Bqa2Nram9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3ODY2NzcsImV4cCI6MjA4NzM2MjY3N30.zNGNwB8rWGBd7dJSVXglkJbZamxq8EcNCppVGFTXWuc';
-	const USER_KEY = 'yartya';
-	/* ============================================================ */
-
-	let supa = null;
-	if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
-		supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-	}
-
-	/* ---------- 루틴 정의 ---------- */
-	const rotation = {
-		1: { t: '손 (Hands)', n: '손가락 관절, 쥔 손·펼친 손' },
-		2: { t: '옷주름 — 당김', n: '뻗은 팔·당겨지는 지점' },
-		3: { t: '얼굴 각도', n: '측면·반측면·아오리·부감' },
-		4: { t: '옷주름 — 쌓임/걸림', n: '접힌 관절, 흐르는 세로 주름' },
-		5: { t: '다리 · 발', n: '무게 실린 다리, 발 각도' },
-	};
-	function tasksFor(day) {
-		if (day >= 1 && day <= 5)
-			return [
-				{ id: 'g', time: '10분', title: '타이머 제스처 드로잉', note: '20~30초, 강제 넘김 · 어깨/골반선' },
-				{ id: 'r', time: '30분', title: rotation[day].t, note: rotation[day].n },
-			];
-		if (day === 6) return [{ id: 'c', time: '4시간', title: '학원 수업 (클튜)', note: '인체·근육·옷주름 관찰·이해' }];
-		return [
-			{ id: 'c', time: '4시간', title: '학원 수업 (클튜)', note: '실물↔일러 표본 비교' },
-			{ id: 'i', time: '1시간', title: '저녁 일러 — 수업 적용', note: '한 캐릭터 러프→선화→채색 이어그리기' },
-		];
-	}
-	const DOW = ['일', '월', '화', '수', '목', '금', '토'];
-
-	/* ---------- 상태 & 저장소 ---------- */
-	const LS_KEY = 'drawing_calendar_v1';
-	let state = {};
-	let view = new Date();
-	let sel = iso(new Date());
-	function iso(d) {
-		return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-	}
-	function parseIso(s) {
-		const [y, m, d] = s.split('-').map(Number);
-		return new Date(y, m - 1, d);
-	}
-	function setStatus(t) {
-		document.getElementById('status').textContent = t;
-	}
-
-	async function loadState() {
-		if (supa) {
-			const { data, error } = await supa.from('routine_state').select('data').eq('id', USER_KEY).maybeSingle();
-			if (error) {
-				setStatus('연결 실패 ⚠');
-				return;
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>드로잉 루틴 달력</title>
+		<link rel="apple-touch-icon" href="icon-180.png" />
+		<link rel="icon" type="image/png" href="icon-180.png" />
+		<link rel="manifest" href="manifest.webmanifest" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-title" content="드로잉 루틴" />
+		<meta name="theme-color" content="#1E2D4D" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+		<style>
+			:root {
+				--paper: #fbfaf7;
+				--card: #ffffff;
+				--ink: #1e2d4d;
+				--blue: #3f6ea5;
+				--blue-soft: #eaf0f7;
+				--muted: #8a9099;
+				--line: #e7e4dd;
+				--done: #3f6ea5;
+				--rest: #c9a24b;
 			}
-			state = data && data.data ? data.data : {};
-			setStatus('동기화됨 ✓');
-		} else {
-			try {
-				const raw = localStorage.getItem(LS_KEY);
-				if (raw) state = JSON.parse(raw);
-			} catch (e) {}
-			setStatus('이 브라우저에 저장');
-		}
-	}
-	let saveTimer = null;
-	function persist() {
-		if (supa) {
-			setStatus('저장 중…');
-			clearTimeout(saveTimer);
-			saveTimer = setTimeout(async () => {
-				const { error } = await supa.from('routine_state').upsert({ id: USER_KEY, data: state, updated_at: new Date().toISOString() });
-				setStatus(error ? '저장 실패 ⚠' : '저장됨 ✓');
-			}, 600);
-		} else {
-			try {
-				localStorage.setItem(LS_KEY, JSON.stringify(state));
-			} catch (e) {}
-		}
-	}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: var(--paper);
+				color: var(--ink);
+				font-family: 'Inter', sans-serif;
+				line-height: 1.5;
+				padding: 24px 16px 60px;
+			}
+			.wrap {
+				max-width: 680px;
+				margin: 0 auto;
+			}
+			.eyebrow {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				letter-spacing: 0.14em;
+				text-transform: uppercase;
+				color: var(--blue);
+				margin: 0 0 6px;
+			}
+			.title-row {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				margin-bottom: 16px;
+				flex-wrap: wrap;
+			}
+			h1 {
+				font-family: 'Archivo', sans-serif;
+				font-weight: 800;
+				font-size: 26px;
+				margin: 0;
+				letter-spacing: -0.01em;
+			}
+			.status {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				padding: 4px 9px;
+				border-radius: 7px;
+				background: var(--blue-soft);
+				color: var(--blue);
+			}
 
-	/* ---------- 렌더 ---------- */
-	function renderCal() {
-		const y = view.getFullYear(),
-			m = view.getMonth();
-		document.getElementById('month').textContent = `${y}. ${String(m + 1).padStart(2, '0')}`;
-		const start = new Date(y, m, 1).getDay(),
-			days = new Date(y, m + 1, 0).getDate(),
-			todayIso = iso(new Date());
-		const g = document.getElementById('grid');
-		g.innerHTML = ['월', '화', '수', '목', '금', '토', '일'].map((d, i) => `<div class="dow ${i === 6 ? 'sun' : ''}">${d}</div>`).join('');
-		const offset = (start + 6) % 7;
-		for (let i = 0; i < offset; i++) g.insertAdjacentHTML('beforeend', '<div class="cell empty"></div>');
-		for (let d = 1; d <= days; d++) {
-			const date = new Date(y, m, d),
-				di = iso(date),
-				day = date.getDay(),
-				tks = tasksFor(day);
-			const resting = !!state[di + '__rest'];
-			const done = tks.filter(t => state[di + '__' + t.id]).length;
-			const full = done === tks.length && tks.length > 0;
-			let cls = 'cell';
-			if (day === 0) cls += ' sun';
-			if (di === todayIso) cls += ' today';
-			if (di === sel) cls += ' sel';
-			if (resting) cls += ' rest';
-			else if (full) cls += ' full';
-			const inner = resting
-				? `<span class="dnum">${d}</span><span class="rest-mark">휴식</span>`
-				: `<span class="dnum">${d}</span><div class="dots">${tks.map(t => `<span class="dot ${state[di + '__' + t.id] ? 'on' : ''}"></span>`).join('')}</div>`;
-			g.insertAdjacentHTML('beforeend', `<div class="${cls}" data-iso="${di}">${inner}</div>`);
-		}
-		g.querySelectorAll('.cell:not(.empty)').forEach(c => {
-			c.onclick = () => {
-				sel = c.dataset.iso;
-				renderCal();
-				renderPanel();
+			/* view toggle */
+			.toggle {
+				display: inline-flex;
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				padding: 3px;
+				margin-bottom: 18px;
+			}
+			.toggle button {
+				font-family: 'Space Mono', monospace;
+				font-size: 13px;
+				border: none;
+				background: none;
+				padding: 7px 16px;
+				border-radius: 8px;
+				cursor: pointer;
+				color: var(--muted);
+				transition: 0.15s;
+			}
+			.toggle button.active {
+				background: var(--ink);
+				color: #fff;
+			}
+
+			.cal-head {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 14px;
+			}
+			.month {
+				font-family: 'Archivo', sans-serif;
+				font-weight: 700;
+				font-size: 19px;
+				min-width: 132px;
+			}
+			.nav {
+				display: flex;
+				gap: 6px;
+			}
+			.nav button,
+			.today-btn {
+				font-family: 'Space Mono', monospace;
+				font-size: 13px;
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 9px;
+				padding: 7px 11px;
+				cursor: pointer;
+				color: var(--ink);
+				transition: 0.15s;
+			}
+			.nav button:hover,
+			.today-btn:hover {
+				border-color: var(--blue);
+				color: var(--blue);
+			}
+			.today-btn {
+				margin-left: auto;
+			}
+
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(7, 1fr);
+				gap: 5px;
+			}
+			.dow {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				color: var(--muted);
+				text-align: center;
+				padding: 4px 0 6px;
+			}
+			.dow.sun {
+				color: #c56;
+			}
+			.cell {
+				aspect-ratio: 1;
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				background: var(--card);
+				padding: 5px 6px;
+				cursor: pointer;
+				position: relative;
+				display: flex;
+				flex-direction: column;
+				transition: 0.12s;
+				overflow: hidden;
+			}
+			.cell:hover {
+				border-color: var(--blue);
+			}
+			.cell.empty {
+				background: transparent;
+				border: none;
+				cursor: default;
+			}
+			.cell.today {
+				border-color: var(--blue);
+				box-shadow: 0 0 0 2px var(--blue-soft);
+			}
+			.cell.sel {
+				border-color: var(--ink);
+				box-shadow: 0 0 0 2px var(--ink);
+			}
+			.cell.full {
+				background: var(--blue-soft);
+			}
+			.cell.rest {
+				border-style: dashed;
+				border-color: var(--rest);
+			}
+			.dnum {
+				font-family: 'Space Mono', monospace;
+				font-size: 12px;
+				font-weight: 700;
+				color: var(--ink);
+			}
+			.cell.sun .dnum {
+				color: #c56;
+			}
+			.dots {
+				margin-top: auto;
+				display: flex;
+				gap: 3px;
+				flex-wrap: wrap;
+			}
+			.dot {
+				width: 6px;
+				height: 6px;
+				border-radius: 50%;
+				background: var(--line);
+			}
+			.dot.on {
+				background: var(--done);
+			}
+			.rest-mark {
+				font-size: 10px;
+				color: var(--rest);
+				font-family: 'Space Mono', monospace;
+				margin-top: auto;
+			}
+
+			.panel {
+				margin-top: 22px;
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 14px;
+				padding: 16px 18px;
+			}
+			.panel-head {
+				display: flex;
+				align-items: baseline;
+				gap: 9px;
+				margin-bottom: 6px;
+			}
+			.panel-date {
+				font-family: 'Archivo', sans-serif;
+				font-weight: 700;
+				font-size: 16px;
+			}
+			.panel-dow {
+				font-family: 'Space Mono', monospace;
+				font-size: 12px;
+				color: var(--muted);
+			}
+			.rest-toggle {
+				margin-left: auto;
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				background: none;
+				border: 1px solid var(--line);
+				border-radius: 7px;
+				padding: 5px 9px;
+				cursor: pointer;
+				color: var(--muted);
+				transition: 0.15s;
+			}
+			.rest-toggle.active {
+				background: #fefbf3;
+				border-color: var(--rest);
+				color: #9a7a2e;
+			}
+			.task {
+				display: flex;
+				align-items: flex-start;
+				gap: 11px;
+				padding: 10px 0;
+				cursor: pointer;
+				border-top: 1px solid var(--line);
+			}
+			.task:first-of-type {
+				border-top: none;
+			}
+			.box {
+				flex: none;
+				width: 20px;
+				height: 20px;
+				border: 1.8px solid var(--muted);
+				border-radius: 6px;
+				margin-top: 2px;
+				position: relative;
+				transition: 0.15s;
+			}
+			.task.checked .box {
+				background: var(--done);
+				border-color: var(--done);
+			}
+			.box::after {
+				content: '';
+				position: absolute;
+				left: 6px;
+				top: 2px;
+				width: 5px;
+				height: 10px;
+				border: solid #fff;
+				border-width: 0 2.4px 2.4px 0;
+				transform: rotate(45deg) scale(0);
+				transition: 0.15s;
+			}
+			.task.checked .box::after {
+				transform: rotate(45deg) scale(1);
+			}
+			.t-time {
+				font-family: 'Space Mono', monospace;
+				font-size: 12px;
+				color: var(--blue);
+				font-weight: 700;
+			}
+			.t-title {
+				font-weight: 600;
+				font-size: 14.5px;
+				margin: 1px 0;
+			}
+			.t-note {
+				font-size: 12.5px;
+				color: var(--muted);
+			}
+			.task.checked .t-title {
+				color: var(--muted);
+				text-decoration: line-through;
+			}
+			.panel.resting .task {
+				opacity: 0.35;
+				pointer-events: none;
+			}
+			.rest-banner {
+				display: none;
+				font-size: 12.5px;
+				color: #9a7a2e;
+				background: #fefbf3;
+				border-radius: 9px;
+				padding: 9px 12px;
+				margin-top: 4px;
+			}
+			.panel.resting .rest-banner {
+				display: block;
+			}
+			.footer {
+				margin-top: 18px;
+				font-size: 11.5px;
+				color: var(--muted);
+				font-family: 'Space Mono', monospace;
+				text-align: center;
+			}
+
+			/* ---- summary view ---- */
+			#sumView {
+				display: none;
+			}
+			.stat-grid {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 12px;
+				margin-bottom: 14px;
+			}
+			.stat {
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 14px;
+				padding: 16px 18px;
+			}
+			.stat .label {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				letter-spacing: 0.06em;
+				text-transform: uppercase;
+				color: var(--muted);
+				margin-bottom: 8px;
+			}
+			.stat .big {
+				font-family: 'Archivo', sans-serif;
+				font-weight: 800;
+				font-size: 34px;
+				line-height: 1;
+				color: var(--ink);
+			}
+			.stat .big small {
+				font-size: 16px;
+				font-weight: 700;
+				color: var(--muted);
+				margin-left: 2px;
+			}
+			.stat .sub {
+				font-size: 12px;
+				color: var(--muted);
+				margin-top: 6px;
+			}
+			.stat.streak .big {
+				color: var(--blue);
+			}
+
+			.bars {
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 14px;
+				padding: 18px;
+			}
+			.bars h3 {
+				font-family: 'Archivo', sans-serif;
+				font-size: 15px;
+				margin: 0 0 3px;
+			}
+			.bars .cap {
+				font-size: 12px;
+				color: var(--muted);
+				margin: 0 0 16px;
+			}
+			.brow {
+				display: grid;
+				grid-template-columns: 34px 1fr 40px;
+				align-items: center;
+				gap: 10px;
+				margin: 9px 0;
+			}
+			.brow .d {
+				font-family: 'Space Mono', monospace;
+				font-size: 13px;
+				font-weight: 700;
+				color: var(--ink);
+			}
+			.brow.sun .d {
+				color: #c56;
+			}
+			.track {
+				height: 12px;
+				background: var(--blue-soft);
+				border-radius: 99px;
+				overflow: hidden;
+			}
+			.track span {
+				display: block;
+				height: 100%;
+				background: var(--blue);
+				border-radius: 99px;
+				transition: width 0.4s ease;
+			}
+			.brow.weak .track span {
+				background: var(--rest);
+			}
+			.brow .pct {
+				font-family: 'Space Mono', monospace;
+				font-size: 12px;
+				color: var(--muted);
+				text-align: right;
+			}
+			.insight {
+				background: var(--blue-soft);
+				border-radius: 12px;
+				padding: 13px 15px;
+				margin-top: 16px;
+				font-size: 13px;
+				color: #2c4a6b;
+			}
+			.insight b {
+				color: var(--ink);
+			}
+
+			/* memo (한 줄 회고) */
+			.memo {
+				margin-top: 14px;
+				border-top: 1px solid var(--line);
+				padding-top: 13px;
+			}
+			.memo-label {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				letter-spacing: 0.06em;
+				text-transform: uppercase;
+				color: var(--muted);
+				margin-bottom: 7px;
+				display: flex;
+				align-items: center;
+				gap: 7px;
+			}
+			.memo textarea {
+				width: 100%;
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				padding: 10px 12px;
+				font-family: 'Inter', sans-serif;
+				font-size: 14px;
+				color: var(--ink);
+				resize: none;
+				background: var(--paper);
+				line-height: 1.45;
+				transition: 0.15s;
+			}
+			.memo textarea:focus {
+				outline: none;
+				border-color: var(--blue);
+				background: #fff;
+			}
+			.memo textarea::placeholder {
+				color: #b7bcc4;
+			}
+			.memo-saved {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				color: var(--blue);
+				opacity: 0;
+				transition: 0.2s;
+			}
+			.memo-saved.show {
+				opacity: 1;
+			}
+			.cell .memo-dot {
+				position: absolute;
+				top: 5px;
+				right: 6px;
+				width: 5px;
+				height: 5px;
+				border-radius: 50%;
+				background: var(--rest);
+			}
+
+			/* memo list in summary */
+			.logs {
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 14px;
+				padding: 18px;
+				margin-top: 12px;
+			}
+			.logs h3 {
+				font-family: 'Archivo', sans-serif;
+				font-size: 15px;
+				margin: 0 0 14px;
+			}
+			.log {
+				display: grid;
+				grid-template-columns: 52px 1fr;
+				gap: 12px;
+				padding: 11px 0;
+				border-top: 1px solid var(--line);
+			}
+			.log:first-of-type {
+				border-top: none;
+			}
+			.log .ld {
+				font-family: 'Space Mono', monospace;
+				font-size: 12px;
+				color: var(--blue);
+				font-weight: 700;
+				padding-top: 1px;
+			}
+			.log .lt {
+				font-size: 13.5px;
+				color: var(--ink);
+				white-space: pre-wrap;
+			}
+			.logs .empty-note {
+				font-size: 13px;
+				color: var(--muted);
+			}
+
+			/* rotation editor */
+			#editView {
+				display: none;
+			}
+			.ed-intro {
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 14px;
+				padding: 16px 18px;
+				margin-bottom: 14px;
+			}
+			.ed-intro h3 {
+				font-family: 'Archivo', sans-serif;
+				font-size: 16px;
+				margin: 0 0 6px;
+			}
+			.ed-intro p {
+				font-size: 13px;
+				color: var(--muted);
+				margin: 0;
+			}
+			.ed-intro .fixed {
+				margin-top: 10px;
+				font-size: 12.5px;
+				color: #2c4a6b;
+				background: var(--blue-soft);
+				border-radius: 9px;
+				padding: 9px 12px;
+			}
+			.ed-card {
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 14px;
+				padding: 14px 16px;
+				margin-bottom: 10px;
+			}
+			.ed-head {
+				display: flex;
+				align-items: center;
+				gap: 9px;
+				margin-bottom: 10px;
+			}
+			.ed-dow {
+				font-family: 'Archivo', sans-serif;
+				font-weight: 700;
+				font-size: 15px;
+			}
+			.ed-tag {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				color: var(--blue);
+				background: var(--blue-soft);
+				padding: 3px 8px;
+				border-radius: 6px;
+			}
+			.ed-field {
+				margin-bottom: 8px;
+			}
+			.ed-field:last-child {
+				margin-bottom: 0;
+			}
+			.ed-field label {
+				font-family: 'Space Mono', monospace;
+				font-size: 10.5px;
+				letter-spacing: 0.05em;
+				text-transform: uppercase;
+				color: var(--muted);
+				display: block;
+				margin-bottom: 4px;
+			}
+			.ed-field input {
+				width: 100%;
+				border: 1px solid var(--line);
+				border-radius: 9px;
+				padding: 9px 11px;
+				font-family: 'Inter', sans-serif;
+				font-size: 14px;
+				color: var(--ink);
+				background: var(--paper);
+				transition: 0.15s;
+			}
+			.ed-field input:focus {
+				outline: none;
+				border-color: var(--blue);
+				background: #fff;
+			}
+			.ed-actions {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-top: 6px;
+			}
+			.ed-restore {
+				font-family: 'Space Mono', monospace;
+				font-size: 12px;
+				background: none;
+				border: 1px solid var(--line);
+				border-radius: 9px;
+				padding: 8px 13px;
+				cursor: pointer;
+				color: var(--muted);
+				transition: 0.15s;
+			}
+			.ed-restore:hover {
+				border-color: var(--rest);
+				color: #9a7a2e;
+			}
+			.ed-saved {
+				font-family: 'Space Mono', monospace;
+				font-size: 11px;
+				color: var(--blue);
+				opacity: 0;
+				transition: 0.2s;
+			}
+			.ed-saved.show {
+				opacity: 1;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<p class="eyebrow">Weekly Practice / 커미션 로드맵</p>
+			<div class="title-row">
+				<h1>드로잉 루틴 달력</h1>
+				<span class="status" id="status">…</span>
+			</div>
+
+			<div class="toggle">
+				<button id="tCal" class="active">달력</button>
+				<button id="tSum">결산</button>
+				<button id="tEdit">편집</button>
+			</div>
+
+			<div class="cal-head" id="calHead">
+				<div class="nav"><button id="prev">‹</button><button id="next">›</button></div>
+				<span class="month" id="month"></span>
+				<button class="today-btn" id="goToday">오늘</button>
+			</div>
+
+			<div id="calView">
+				<div class="grid" id="grid"></div>
+				<div class="panel" id="panel"></div>
+				<div class="footer" id="footer"></div>
+			</div>
+
+			<div id="sumView"></div>
+			<div id="editView"></div>
+		</div>
+
+		<script>
+			const SUPABASE_URL = 'https://uoicwhvevpmgpjkckjol.supabase.co';
+			const SUPABASE_ANON_KEY =
+				'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaWN3aHZldnBtZ3Bqa2Nram9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3ODY2NzcsImV4cCI6MjA4NzM2MjY3N30.zNGNwB8rWGBd7dJSVXglkJbZamxq8EcNCppVGFTXWuc';
+			const USER_KEY = 'yartya';
+
+			let supa = null;
+			if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+				supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+			}
+
+			/* ---------- 루틴 정의 ---------- */
+			const DEFAULT_ROTATION = {
+				1: { t: '손 (Hands)', n: '손가락 관절, 쥔 손·펼친 손' },
+				2: { t: '옷주름 — 당김', n: '뻗은 팔·당겨지는 지점' },
+				3: { t: '얼굴 각도', n: '측면·반측면·아오리·부감' },
+				4: { t: '옷주름 — 쌓임/걸림', n: '접힌 관절, 흐르는 세로 주름' },
+				5: { t: '다리 · 발', n: '무게 실린 다리, 발 각도' },
 			};
-		});
-	}
-	function renderPanel() {
-		const date = parseIso(sel),
-			day = date.getDay(),
-			tks = tasksFor(day),
-			resting = !!state[sel + '__rest'];
-		const p = document.getElementById('panel');
-		p.className = 'panel' + (resting ? ' resting' : '');
-		p.innerHTML = `
+			let rotation = {};
+			function applyRotation() {
+				rotation = {};
+				for (const k of [1, 2, 3, 4, 5]) {
+					const base = DEFAULT_ROTATION[k];
+					const ov = (state.__rotation && state.__rotation[k]) || {};
+					rotation[k] = {
+						t: ov.t !== undefined && ov.t !== '' ? ov.t : base.t,
+						n: ov.n !== undefined ? ov.n : base.n,
+					};
+				}
+			}
+			function tasksFor(day) {
+				if (day >= 1 && day <= 5)
+					return [
+						{ id: 'g', time: '10분', title: '타이머 제스처 드로잉', note: '20~30초, 강제 넘김 · 어깨/골반선' },
+						{ id: 'r', time: '30분', title: rotation[day].t, note: rotation[day].n },
+					];
+				if (day === 6) return [{ id: 'c', time: '4시간', title: '학원 수업 (클튜)', note: '인체·근육·옷주름 관찰·이해' }];
+				return [
+					{ id: 'c', time: '4시간', title: '학원 수업 (클튜)', note: '실물↔일러 표본 비교' },
+					{ id: 'i', time: '1시간', title: '저녁 일러 — 수업 적용', note: '한 캐릭터 러프→선화→채색 이어그리기' },
+				];
+			}
+			const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+			const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0]; // 월~일
+
+			/* ---------- 상태 & 저장소 ---------- */
+			const LS_KEY = 'drawing_calendar_v1';
+			let state = {};
+			let view = new Date();
+			let sel = iso(new Date());
+			function iso(d) {
+				return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+			}
+			function parseIso(s) {
+				const [y, m, d] = s.split('-').map(Number);
+				return new Date(y, m - 1, d);
+			}
+			function setStatus(t) {
+				document.getElementById('status').textContent = t;
+			}
+
+			async function loadState() {
+				if (supa) {
+					const { data, error } = await supa.from('routine_state').select('data').eq('id', USER_KEY).maybeSingle();
+					if (error) {
+						setStatus('연결 실패 ⚠');
+						return;
+					}
+					state = data && data.data ? data.data : {};
+					setStatus('동기화됨 ✓');
+				} else {
+					try {
+						const raw = localStorage.getItem(LS_KEY);
+						if (raw) state = JSON.parse(raw);
+					} catch (e) {}
+					setStatus('이 브라우저에 저장');
+				}
+			}
+			let saveTimer = null;
+			function persist() {
+				if (supa) {
+					setStatus('저장 중…');
+					clearTimeout(saveTimer);
+					saveTimer = setTimeout(async () => {
+						const { error } = await supa.from('routine_state').upsert({ id: USER_KEY, data: state, updated_at: new Date().toISOString() });
+						setStatus(error ? '저장 실패 ⚠' : '저장됨 ✓');
+					}, 600);
+				} else {
+					try {
+						localStorage.setItem(LS_KEY, JSON.stringify(state));
+					} catch (e) {}
+				}
+			}
+
+			/* ---------- 통계 헬퍼 ---------- */
+			function isRest(di) {
+				return !!state[di + '__rest'];
+			}
+			function dayDone(di, day) {
+				// 그날 모든 task 체크됨?
+				const tks = tasksFor(day);
+				return tks.length > 0 && tks.every(t => state[di + '__' + t.id]);
+			}
+			function dayHasAny(di, day) {
+				return tasksFor(day).some(t => state[di + '__' + t.id]);
+			}
+
+			/* ---------- 렌더: 달력 ---------- */
+			function renderCal() {
+				const y = view.getFullYear(),
+					m = view.getMonth();
+				document.getElementById('month').textContent = `${y}. ${String(m + 1).padStart(2, '0')}`;
+				const start = new Date(y, m, 1).getDay(),
+					days = new Date(y, m + 1, 0).getDate(),
+					todayIso = iso(new Date());
+				const g = document.getElementById('grid');
+				g.innerHTML = ['월', '화', '수', '목', '금', '토', '일'].map((d, i) => `<div class="dow ${i === 6 ? 'sun' : ''}">${d}</div>`).join('');
+				const offset = (start + 6) % 7;
+				for (let i = 0; i < offset; i++) g.insertAdjacentHTML('beforeend', '<div class="cell empty"></div>');
+				for (let d = 1; d <= days; d++) {
+					const date = new Date(y, m, d),
+						di = iso(date),
+						day = date.getDay(),
+						tks = tasksFor(day);
+					const resting = isRest(di);
+					const done = tks.filter(t => state[di + '__' + t.id]).length;
+					const full = done === tks.length && tks.length > 0;
+					let cls = 'cell';
+					if (day === 0) cls += ' sun';
+					if (di === todayIso) cls += ' today';
+					if (di === sel) cls += ' sel';
+					if (resting) cls += ' rest';
+					else if (full) cls += ' full';
+					const memoDot = state[di + '__memo'] ? '<span class="memo-dot"></span>' : '';
+					const inner = resting
+						? `<span class="dnum">${d}</span><span class="rest-mark">휴식</span>`
+						: `<span class="dnum">${d}</span><div class="dots">${tks.map(t => `<span class="dot ${state[di + '__' + t.id] ? 'on' : ''}"></span>`).join('')}</div>`;
+					g.insertAdjacentHTML('beforeend', `<div class="${cls}" data-iso="${di}">${memoDot}${inner}</div>`);
+				}
+				g.querySelectorAll('.cell:not(.empty)').forEach(c => {
+					c.onclick = () => {
+						sel = c.dataset.iso;
+						renderCal();
+						renderPanel();
+					};
+				});
+			}
+			function renderPanel() {
+				const date = parseIso(sel),
+					day = date.getDay(),
+					tks = tasksFor(day),
+					resting = isRest(sel);
+				const p = document.getElementById('panel');
+				p.className = 'panel' + (resting ? ' resting' : '');
+				p.innerHTML = `
     <div class="panel-head">
       <span class="panel-date">${date.getMonth() + 1}월 ${date.getDate()}일</span>
       <span class="panel-dow">${DOW[day]}요일</span>
@@ -479,53 +869,303 @@
         <div><div class="t-time">${t.time}</div><div class="t-title">${t.title}</div><div class="t-note">${t.note}</div></div>
       </div>`
 			)
-			.join('')}`;
-		p.querySelectorAll('.task').forEach(el => {
-			el.onclick = () => {
-				const k = sel + '__' + el.dataset.id;
-				state[k] = !state[k];
-				persist();
+			.join('')}
+    <div class="memo">
+      <div class="memo-label">오늘 한 줄 <span class="memo-saved" id="memoSaved">저장됨</span></div>
+      <textarea id="memo" rows="2" placeholder="뭐가 어려웠는지, 뭘 알게 됐는지 한 줄…">${(state[sel + '__memo'] || '').replace(/</g, '&lt;')}</textarea>
+    </div>`;
+				p.querySelectorAll('.task').forEach(el => {
+					el.onclick = () => {
+						const k = sel + '__' + el.dataset.id;
+						state[k] = !state[k];
+						persist();
+						renderCal();
+						renderPanel();
+					};
+				});
+				document.getElementById('restBtn').onclick = () => {
+					const k = sel + '__rest';
+					state[k] = !state[k];
+					persist();
+					renderCal();
+					renderPanel();
+				};
+
+				const ta = document.getElementById('memo'),
+					savedTag = document.getElementById('memoSaved');
+				// 커서 유지 위해 입력 중엔 재렌더 안 함 — 값만 상태에 반영 + 디바운스 저장
+				let memoT = null;
+				ta.addEventListener('input', () => {
+					const v = ta.value;
+					if (v.trim()) state[sel + '__memo'] = v;
+					else delete state[sel + '__memo'];
+					clearTimeout(memoT);
+					memoT = setTimeout(() => {
+						persist();
+						savedTag.classList.add('show');
+						setTimeout(() => savedTag.classList.remove('show'), 1200);
+						renderCal(); // 메모 점 표시 갱신
+					}, 500);
+				});
+			}
+
+			/* ---------- 렌더: 결산 ---------- */
+			function renderSummary() {
+				const y = view.getFullYear(),
+					m = view.getMonth();
+				const days = new Date(y, m + 1, 0).getDate();
+				const today = new Date();
+				today.setHours(0, 0, 0, 0);
+
+				let checked = 0,
+					totalSlots = 0,
+					restCount = 0,
+					fullDays = 0,
+					activeDays = 0;
+				const byDow = {};
+				DOW_ORDER.forEach(d => (byDow[d] = { done: 0, total: 0 }));
+				const logs = [];
+
+				for (let d = 1; d <= days; d++) {
+					const date = new Date(y, m, d),
+						di = iso(date),
+						day = date.getDay();
+					const memo = state[di + '__memo'];
+					if (memo) logs.push({ d, day, memo }); // 회고는 미래·휴식 상관없이 수집
+					if (date > today) continue; // 미래 제외
+					if (isRest(di)) {
+						restCount++;
+						continue;
+					} // 휴식일은 분모에서 제외
+					const tks = tasksFor(day);
+					const dc = tks.filter(t => state[di + '__' + t.id]).length;
+					checked += dc;
+					totalSlots += tks.length;
+					if (dayHasAny(di, day)) activeDays++;
+					byDow[day].total++;
+					if (dc === tks.length) {
+						fullDays++;
+						byDow[day].done++;
+					}
+				}
+				const rate = totalSlots ? Math.round((checked / totalSlots) * 100) : 0;
+
+				// 연속 기록: 오늘(또는 미완이면 어제)부터 뒤로, 완주 or 휴식이면 이어짐
+				let streak = 0;
+				let cur = new Date(today);
+				if (!isRest(iso(cur)) && !dayDone(iso(cur), cur.getDay())) cur.setDate(cur.getDate() - 1);
+				while (true) {
+					const di = iso(cur),
+						day = cur.getDay();
+					if (isRest(di) || dayDone(di, day)) {
+						streak++;
+						cur.setDate(cur.getDate() - 1);
+					} else break;
+					if (streak > 400) break;
+				}
+
+				// 요일별 약점 찾기
+				let weakDay = null,
+					weakPct = 101;
+				DOW_ORDER.forEach(d => {
+					const b = byDow[d];
+					if (b.total >= 2) {
+						const p = (b.done / b.total) * 100;
+						if (p < weakPct) {
+							weakPct = p;
+							weakDay = d;
+						}
+					}
+				});
+
+				const barsHtml = DOW_ORDER.map(d => {
+					const b = byDow[d];
+					const pct = b.total ? Math.round((b.done / b.total) * 100) : 0;
+					const weak = d === weakDay && weakPct < 70 && b.total >= 2;
+					return `<div class="brow ${d === 0 ? 'sun' : ''} ${weak ? 'weak' : ''}">
+      <span class="d">${DOW[d]}</span>
+      <div class="track"><span style="width:${b.total ? pct : 0}%"></span></div>
+      <span class="pct">${b.total ? pct + '%' : '–'}</span>
+    </div>`;
+				}).join('');
+
+				let insight;
+				if (activeDays === 0 && restCount === 0) {
+					insight = '이번 달 기록이 아직 없어요. 오늘 칸부터 하나 체크하며 시작해요.';
+				} else if (weakDay !== null && weakPct < 60) {
+					insight = `<b>${DOW[weakDay]}요일</b>이 가장 자주 비어요. 그날 항목이 무리인지, 아니면 그 요일 컨디션 자체가 안 좋은지 살펴보세요. 무리라면 <b>휴식일로 지정</b>하는 것도 방법이에요.`;
+				} else if (rate >= 80) {
+					insight = `완주율 <b>${rate}%</b> — 아주 잘 지키고 있어요. 이 페이스면 습관이 자리잡는 중이에요. 무리는 아닌지 잠·회복만 챙기세요.`;
+				} else {
+					insight = `꾸준히 쌓이고 있어요. 완벽하게 채우는 것보다 <b>연속을 끊지 않는 것</b>이 실력엔 더 중요해요.`;
+				}
+
+				document.getElementById('sumView').innerHTML = `
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="label">이달 완주율</div>
+        <div class="big">${rate}<small>%</small></div>
+        <div class="sub">완주 ${fullDays}일 · 세션 ${checked}개</div>
+      </div>
+      <div class="stat streak">
+        <div class="label">현재 연속</div>
+        <div class="big">${streak}<small>일</small></div>
+        <div class="sub">휴식일도 연속에 포함돼요</div>
+      </div>
+    </div>
+    <div class="bars">
+      <h3>요일별 실천율</h3>
+      <p class="cap">${y}년 ${m + 1}월 · 어느 요일이 약한지 보이나요?</p>
+      ${barsHtml}
+      <div class="insight">${insight}</div>
+    </div>
+    <div class="stat" style="margin-top:12px">
+      <div class="label">휴식일</div>
+      <div class="big">${restCount}<small>일</small></div>
+      <div class="sub">쉬는 것도 루틴의 일부예요</div>
+    </div>
+    <div class="logs">
+      <h3>이달의 한 줄 회고</h3>
+      ${
+				logs.length
+					? logs
+							.map(
+								l => `<div class="log">
+            <span class="ld">${m + 1}.${String(l.d).padStart(2, '0')} ${DOW[l.day]}</span>
+            <span class="lt">${l.memo.replace(/</g, '&lt;')}</span>
+          </div>`
+							)
+							.join('')
+					: `<p class="empty-note">아직 회고가 없어요. 달력에서 날짜를 눌러 "오늘 한 줄"에 남기면 여기 모여요 — 뭐가 자꾸 어려운지 쌓이면 로테이션 조정의 근거가 돼요.</p>`
+			}
+    </div>`;
+			}
+
+			/* ---------- 렌더: 로테이션 편집 ---------- */
+			function escAttr(s) {
+				return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+			}
+			function renderEditor() {
+				const wd = [
+					[1, '월'],
+					[2, '화'],
+					[3, '수'],
+					[4, '목'],
+					[5, '금'],
+				];
+				const cards = wd
+					.map(
+						([d, label]) => `
+    <div class="ed-card">
+      <div class="ed-head"><span class="ed-dow">${label}요일</span><span class="ed-tag">30분 슬롯</span></div>
+      <div class="ed-field">
+        <label>연습 항목</label>
+        <input class="ed-title" data-d="${d}" value="${escAttr(rotation[d].t)}" placeholder="예: 손, 개인작, 옷주름…">
+      </div>
+      <div class="ed-field">
+        <label>메모 (선택)</label>
+        <input class="ed-note" data-d="${d}" value="${escAttr(rotation[d].n)}" placeholder="예: 그리고 싶은 거 자유롭게">
+      </div>
+    </div>`
+					)
+					.join('');
+
+				document.getElementById('editView').innerHTML = `
+    <div class="ed-intro">
+      <h3>평일 로테이션 편집</h3>
+      <p>평일 30분 슬롯의 내용을 요일마다 바꿀 수 있어요. 바꾸면 달력·결산에 바로 반영되고, 자동 저장돼요.</p>
+      <div class="fixed">앞 10분 타이머 제스처는 손 풀기 겸 약점 훈련이라 고정이에요. 개인작 데이를 만들고 싶으면 원하는 요일 항목을 <b>"개인작"</b>으로 바꾸면 돼요.</div>
+    </div>
+    ${cards}
+    <div class="ed-actions">
+      <button class="ed-restore" id="edRestore">기본값으로 복원</button>
+      <span class="ed-saved" id="edSaved">저장됨 ✓</span>
+    </div>`;
+
+				let edT = null;
+				function writeField(d, field, val) {
+					if (!state.__rotation) state.__rotation = {};
+					if (!state.__rotation[d]) state.__rotation[d] = {};
+					state.__rotation[d][field] = val;
+					applyRotation();
+					clearTimeout(edT);
+					edT = setTimeout(() => {
+						persist();
+						const tag = document.getElementById('edSaved');
+						tag.classList.add('show');
+						setTimeout(() => tag.classList.remove('show'), 1200);
+						renderCal();
+						if (viewMode === 'cal') renderPanel();
+					}, 450);
+				}
+				document.querySelectorAll('.ed-title').forEach(inp => {
+					inp.addEventListener('input', () => writeField(inp.dataset.d, 't', inp.value));
+				});
+				document.querySelectorAll('.ed-note').forEach(inp => {
+					inp.addEventListener('input', () => writeField(inp.dataset.d, 'n', inp.value));
+				});
+				document.getElementById('edRestore').onclick = () => {
+					if (!confirm('평일 로테이션을 기본값으로 되돌릴까요? (체크·회고 기록은 그대로예요)')) return;
+					delete state.__rotation;
+					applyRotation();
+					persist();
+					renderEditor();
+					renderCal();
+				};
+			}
+
+			/* ---------- 뷰 전환 ---------- */
+			let viewMode = 'cal';
+			function switchView(mode) {
+				viewMode = mode;
+				document.getElementById('tCal').classList.toggle('active', mode === 'cal');
+				document.getElementById('tSum').classList.toggle('active', mode === 'sum');
+				document.getElementById('tEdit').classList.toggle('active', mode === 'edit');
+				document.getElementById('calView').style.display = mode === 'cal' ? '' : 'none';
+				document.getElementById('sumView').style.display = mode === 'sum' ? 'block' : 'none';
+				document.getElementById('editView').style.display = mode === 'edit' ? 'block' : 'none';
+				document.getElementById('calHead').style.display = mode === 'edit' ? 'none' : '';
+				if (mode === 'sum') renderSummary();
+				if (mode === 'edit') renderEditor();
+			}
+			function refresh() {
 				renderCal();
 				renderPanel();
+				if (viewMode === 'sum') renderSummary();
+			}
+
+			document.getElementById('tCal').onclick = () => switchView('cal');
+			document.getElementById('tSum').onclick = () => switchView('sum');
+			document.getElementById('tEdit').onclick = () => switchView('edit');
+			document.getElementById('prev').onclick = () => {
+				view.setMonth(view.getMonth() - 1);
+				refresh();
 			};
-		});
-		document.getElementById('restBtn').onclick = () => {
-			const k = sel + '__rest';
-			state[k] = !state[k];
-			persist();
-			renderCal();
-			renderPanel();
-		};
-	}
+			document.getElementById('next').onclick = () => {
+				view.setMonth(view.getMonth() + 1);
+				refresh();
+			};
+			document.getElementById('goToday').onclick = () => {
+				view = new Date();
+				sel = iso(new Date());
+				refresh();
+			};
+			document.getElementById('footer').textContent = '날짜를 눌러 체크 · 지친 날은 "휴식일로"';
 
-	document.getElementById('prev').onclick = () => {
-		view.setMonth(view.getMonth() - 1);
-		renderCal();
-	};
-	document.getElementById('next').onclick = () => {
-		view.setMonth(view.getMonth() + 1);
-		renderCal();
-	};
-	document.getElementById('goToday').onclick = () => {
-		view = new Date();
-		sel = iso(new Date());
-		renderCal();
-		renderPanel();
-	};
-	document.getElementById('footer').textContent = '날짜를 눌러 체크 · 지친 날은 "휴식일로"';
+			window.addEventListener('focus', async () => {
+				if (supa) {
+					await loadState();
+					applyRotation();
+					refresh();
+				}
+			});
 
-	// 다른 기기에서 바꾼 내용 반영 (탭 다시 열 때 최신화)
-	window.addEventListener('focus', async () => {
-		if (supa) {
-			await loadState();
-			renderCal();
-			renderPanel();
-		}
-	});
-
-	(async function boot() {
-		await loadState();
-		renderCal();
-		renderPanel();
-	})();
-</script>
+			(async function boot() {
+				await loadState();
+				applyRotation();
+				renderCal();
+				renderPanel();
+			})();
+		</script>
+	</body>
+</html>
